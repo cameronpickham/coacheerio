@@ -1,13 +1,24 @@
 request = require 'request'
 cheerio = require 'cheerio'
 async   = require 'async'
-Quiche  = require 'quiche'
 open    = require 'open'
+Quiche  = require 'quiche'
 
 start     = 0
 prices    = {}
 done      = false
-STOP_DATE = 'Mar 26'
+max       = Infinity
+STOP_DATE = 'Mar 20'
+PAGE_BY   = 100 # Pretty sure this is the only option on Craigslist anyway
+
+getMax = (cb) ->
+  url = "http://losangeles.craigslist.org/search/sss?s=0&catAbb=sss&query=coachella+weekend+2&excats=20-170"
+  request url, (err, res, body) ->
+    $ = cheerio.load(body)
+
+    split = $('.pagenum').text().split(' ')
+    max   = +split[split.length - 1]
+    cb()
 
 toChart = (data) ->
   labels = []
@@ -44,7 +55,10 @@ processResults = ->
   return ret
 
 fn = (cb) ->
-  url = "http://losangeles.craigslist.org/search/sss?s=#{start}&catAbb=sss&query=coachella+weekend+2&excats=20-170"
+  url  = "http://losangeles.craigslist.org/search/sss?s=#{start}&catAbb=sss&query=coachella+weekend+2&excats=20-170"
+  done = max - start < PAGE_BY
+  
+  console.log "#{start}/#{max}"
   
   request url, (err, res, body) ->
     return cb(err) if err
@@ -59,17 +73,17 @@ fn = (cb) ->
       continue unless rawPrice
       
       cleanPrice = rawPrice.match(/\d+$/)[0]
-      done = date == STOP_DATE
+      done = date == STOP_DATE unless done
       
       prices[postId] = cleanPrice
-     
+    
     cb(null)
 
 test = ->
-  console.log 'Done?', done
-  start += 100
+  start += PAGE_BY
   return !done
 
-async.doWhilst fn, test, (err) ->
-  processed = processResults()
-  toChart(processed)
+getMax ->
+  async.doWhilst fn, test, (err) ->
+    processed = processResults()
+    toChart(processed)
