@@ -1,3 +1,3 @@
 coacheerio
 ==========
-Scraping Craigslist to get data to visualize coachella ticket price trends
+Scraping Craigslist to get data to visualize Coachella ticket price trends
